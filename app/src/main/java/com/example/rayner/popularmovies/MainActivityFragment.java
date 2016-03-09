@@ -14,7 +14,9 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -52,6 +54,7 @@ public class MainActivityFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
+        movieAdapter.clear();
         updateMovieGrid();
     }
 
@@ -77,7 +80,26 @@ public class MainActivityFragment extends Fragment {
 
         // @ToDo
         // Add GridView click event below
+        mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+                //Get item at position
+                MovieItem item = (MovieItem) parent.getItemAtPosition(position);
 
+                Intent intent = new Intent(getActivity(), DetailActivity.class);
+                ImageView imageView = (ImageView) v.findViewById(R.id.grid_item_image);
+
+
+                //Pass MovieItem details
+                intent.putExtra("original_title", item.getOriginal_title()).
+                        putExtra("poster_path", item.getPoster_path()).
+                        putExtra("overview", item.getOverview()).
+                        putExtra("vote_average", item.getVote_average()).
+                        putExtra("release_date", item.getRelease_date());
+
+                //Start details activity
+                startActivity(intent);
+            }
+        });
 
         return rootView;
     }
