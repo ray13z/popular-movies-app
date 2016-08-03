@@ -1,22 +1,14 @@
-package com.example.rayner.popularmovies;
+package com.example.rayner.popularmovies.model;
 
 /**
  * Created by Rayner on 3/8/2016.
  */
 public class MovieItem {
     private String original_title;
-    private String poster_path; // URL
+    private String poster_path; // only path
     private String overview; // synopsis
     private String vote_average; // userRating
     private String release_date;
-
-    public MovieItem(String original_title, String poster_path, String overview, String vote_average, String release_date) {
-        this.original_title = original_title;
-        this.poster_path = poster_path;
-        this.overview = overview;
-        this.vote_average = vote_average;
-        this.release_date = release_date;
-    }
 
     public String getOriginal_title() {
         return original_title;

@@ -1,8 +1,6 @@
 package com.example.rayner.popularmovies;
 
 import android.content.Intent;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -16,20 +14,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.GridView;
-import android.widget.ImageView;
-import android.widget.Toast;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.example.rayner.popularmovies.model.MovieItem;
+import com.example.rayner.popularmovies.model.MovieDBMovies;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -52,18 +49,46 @@ public class MainActivityFragment extends Fragment {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
+    public void onResume() {
+        super.onResume();
         movieAdapter.clear();
         updateMovieGrid();
     }
 
     private void updateMovieGrid() {
-        // @ToDo
-        // Load the moviePosterPathList with poster paths
-        // Call async task
 
-        new FetchMovieDataTask().execute(); // start download
+        String sort_by_pref = PreferenceManager.getDefaultSharedPreferences(getActivity()).getString(getString(R.string.pref_sort_by_key), getString(R.string.pref_sort_by_default_value));
+
+
+        // Retrofit calls
+        Gson gson = new GsonBuilder()
+                .setDateFormat("yyyy-MM-dd")
+                .create();
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(getString(R.string.tmd_base_url))
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+
+        MovieDBAPI movieDBAPI = retrofit.create(MovieDBAPI.class);
+
+        movieDBAPI.loadMovies(sort_by_pref, getString(R.string.api_key))
+                .enqueue(new Callback<MovieDBMovies<MovieItem>>() {
+                    @Override
+                    public void onResponse(Call<MovieDBMovies<MovieItem>> call, Response<MovieDBMovies<MovieItem>> response) {
+                        Log.i(LOG_TAG, response.body().toString());
+                        for (MovieItem movie : response.body().getMovies()) {
+                            mGridData.add(movie);
+                        }
+
+                        movieAdapter.setGridData(mGridData);
+                    }
+
+                    @Override
+                    public void onFailure(Call<MovieDBMovies<MovieItem>> call, Throwable t) {
+                        Log.e(LOG_TAG, call.request().url() + ": failed: " + t);
+                    }
+                });
     }
 
     @Override
@@ -86,7 +111,6 @@ public class MainActivityFragment extends Fragment {
                 MovieItem item = (MovieItem) parent.getItemAtPosition(position);
 
                 Intent intent = new Intent(getActivity(), DetailActivity.class);
-                ImageView imageView = (ImageView) v.findViewById(R.id.grid_item_image);
 
 
                 //Pass MovieItem details
@@ -107,7 +131,6 @@ public class MainActivityFragment extends Fragment {
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-//        inflater.inflate(R.menu.mainactivityfragment_menu, menu);
     }
 
     @Override
@@ -119,121 +142,5 @@ public class MainActivityFragment extends Fragment {
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    private void setMoviePosterPathList(String movieListJSONString) {
-        ArrayList<String> pathList = new ArrayList<>();
-        try {
-            JSONObject movieListJson = new JSONObject(movieListJSONString);
-            JSONArray results = movieListJson.getJSONArray("results");
-
-            MovieItem item;
-            for (int i = 0; i < results.length(); i++) {
-                JSONObject result = results.optJSONObject(i);
-                String original_title = result.getString("original_title");
-                String poster_path = getString(R.string.tmd_base_url) + "/" + getString(R.string.tmd_image_size) + result.getString("poster_path"); // URL (take care of path separators)
-                String overview = result.getString("overview"); // synopsis
-                String vote_average = result.getString("vote_average"); // userRating
-                String release_date = result.getString("release_date");
-
-                item = new MovieItem(original_title, poster_path, overview, vote_average, release_date);
-
-                mGridData.add(item);
-            }
-        } catch (JSONException e) {
-//            e.printStackTrace();
-            Log.e(LOG_TAG, "JSONException while parsing API response - " + e);
-        }
-
-
-    }
-
-    private class FetchMovieDataTask extends AsyncTask<String, Void, Integer> {
-
-        @Override
-        protected Integer doInBackground(String... params) {
-            String movieListJSONString = "";
-
-            /**
-             * Make call to TMD API for discover data
-             */
-
-            // get sort_by preference
-            String sort_by_pref = PreferenceManager.getDefaultSharedPreferences(getActivity()).getString(getString(R.string.pref_sort_by_key), getString(R.string.pref_sort_by_default_value));
-
-            Log.d(LOG_TAG, "sort_by_pref = " + sort_by_pref);
-
-            // Declaring HTTPURLConnection and BufferedReader outside try-catch so it can be closed in finally
-            HttpURLConnection urlConnection = null;
-            BufferedReader reader = null;
-
-            try {
-                Uri.Builder uri_builder = new Uri.Builder();
-                uri_builder.scheme("http")
-                        .authority(getString(R.string.uri_authority))
-                        .appendPath("3")
-                        .appendPath("movie")
-                        .appendPath(sort_by_pref)
-                        .appendQueryParameter("api_key", getString(R.string.api_key));
-
-                // debug
-                Log.d(LOG_TAG, "URL = " + uri_builder.build().toString());
-                URL url = new URL(uri_builder.build().toString());
-
-                urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
-                urlConnection.connect();
-
-                InputStream inputStream = urlConnection.getInputStream();
-                StringBuffer stringBuffer = new StringBuffer();
-
-                if(inputStream == null)
-                    return 1;
-
-                reader = new BufferedReader(new InputStreamReader(inputStream));
-
-                String line;
-
-                while((line = reader.readLine()) != null) {
-                    stringBuffer.append(line + "\n");
-                }
-
-                if(stringBuffer.length() == 0)
-                    return 1;
-
-                movieListJSONString = stringBuffer.toString();
-
-            } catch (java.io.IOException e) {
-//                e.printStackTrace();
-                Log.e(LOG_TAG, "IOException - " + e);
-            } finally {
-                if(urlConnection != null)
-                    urlConnection.disconnect();
-                if(reader != null)
-                    try {
-                        reader.close();
-                    } catch (IOException e) {
-//                        e.printStackTrace();
-                        Log.e(LOG_TAG, "IOException - " + e);
-                    }
-            }
-
-            // Set mGridData by parsing JSON
-            setMoviePosterPathList(movieListJSONString);
-            return 0;
-        }
-
-        @Override
-        protected void onPostExecute(Integer result)
-        {
-            super.onPostExecute(result);
-            // Download complete. Lets update UI
-
-            if (result == 0) {
-                movieAdapter.setGridData(mGridData);
-            } else {
-                Toast.makeText(getActivity(), "Failed to fetch data!", Toast.LENGTH_SHORT).show();
-            }
-        }
     }
 }

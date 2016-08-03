@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 
+import com.example.rayner.popularmovies.model.MovieItem;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
@@ -48,7 +49,8 @@ public class MovieAdapter extends ArrayAdapter<MovieItem> {
         ImageView imageView = (ImageView) convertView.findViewById(R.id.grid_item_image);
 
         // Load image using Picasso library
-        Picasso.with(context).load(movieItem.getPoster_path()).into(imageView);
+        String path = getContext().getString(R.string.tmd_poster_base_url) + "/" + getContext().getString(R.string.tmd_image_size) + movieItem.getPoster_path();
+        Picasso.with(context).load(path).into(imageView);
 
         return convertView;
     }

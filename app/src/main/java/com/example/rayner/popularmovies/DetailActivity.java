@@ -44,7 +44,8 @@ public class DetailActivity extends AppCompatActivity {
         detail_rating.setText(vote_average);
         detail_overview.setText(overview);
 
-        Picasso.with(this).load(poster_path).into(detail_image);
+        String path = getString(R.string.tmd_poster_base_url) + "/" + getString(R.string.tmd_image_size) + poster_path;
+        Picasso.with(this).load(path).into(detail_image);
 
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
