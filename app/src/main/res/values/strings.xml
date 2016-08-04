@@ -9,6 +9,5 @@
     <string name="tmd_image_size">w500</string>
     <string name="pref_sort_by_key">sort_by</string>
     <string name="uri_authority">api.themoviedb.org</string>
-    <string name="api_key">api_key_here</string>
-
+    <string name="api_key">enter_api_key_here</string>
 </resources>
