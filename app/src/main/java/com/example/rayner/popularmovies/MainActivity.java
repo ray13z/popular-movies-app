@@ -1,7 +1,9 @@
 package com.example.rayner.popularmovies;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -12,9 +14,13 @@ import android.view.MenuItem;
 
 public class MainActivity extends AppCompatActivity {
 
+    private String mSort_order;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mSort_order = PreferenceManager.getDefaultSharedPreferences(this).getString(this.getString(R.string.pref_sort_by_key), this.getString(R.string.pref_sort_by_default_value));
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -42,5 +48,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onResume() {
+        String sort_order = PreferenceManager.getDefaultSharedPreferences(this).getString(this.getString(R.string.pref_sort_by_key), this.getString(R.string.pref_sort_by_default_value));
+
+        if(sort_order != null && !sort_order.equals(mSort_order)) {
+            MainActivityFragment fragment = (MainActivityFragment) getSupportFragmentManager().findFragmentById(R.id.fragment_main);
+            fragment.onPreferenceChanged();
+            mSort_order = sort_order;
+        }
+        super.onResume();
     }
 }

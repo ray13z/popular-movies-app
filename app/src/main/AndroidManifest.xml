@@ -37,6 +37,9 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.rayner.popularmovies.MainActivity" />
         </activity>
+        <provider
+            android:authorities="com.example.rayner.popularmovies.provider"
+            android:name=".model.db.MovieDBProvider" />
     </application>
 
 </manifest>
