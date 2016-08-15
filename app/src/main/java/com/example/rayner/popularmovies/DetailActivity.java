@@ -15,39 +15,30 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 
 public class DetailActivity extends AppCompatActivity {
-    // Setup Butterknife views
-    @BindView(R.id.detail_title) TextView detail_title;
-    @BindView(R.id.detail_release_date) TextView detail_release_date;
-    @BindView(R.id.detail_rating) TextView detail_rating;
-    @BindView(R.id.detail_overview) TextView detail_overview;
-    @BindView(R.id.detail_image) ImageView detail_image;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
-        ButterKnife.bind(this);
+
+        if (savedInstanceState == null) {
+            // Create the detail fragment and add it to the activity
+            // using a fragment transaction.
+
+            Bundle arguments = new Bundle();
+            arguments.putParcelable(DetailActivityFragment.DETAIL_URI, getIntent().getData());
+
+            DetailActivityFragment fragment = new DetailActivityFragment();
+            fragment.setArguments(arguments);
+
+            getSupportFragmentManager().beginTransaction()
+                    .add(R.id.movie_detail_container, fragment)
+                    .commit();
+        }
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        Bundle bundle = getIntent().getExtras();
-        String original_title = bundle.getString("original_title");
-        String poster_path = bundle.getString("poster_path");
-        String overview = bundle.getString("overview");
-        String vote_average = bundle.getString("vote_average") + "/10"; // show rating/10
-        String release_date = bundle.getString("release_date").split("-")[0]; // Get release year
-
-        // Set fields in the Activity
-        detail_title.setText(original_title);
-        detail_release_date.setText(release_date);
-        detail_rating.setText(vote_average);
-        detail_overview.setText(overview);
-
-        String path = getString(R.string.tmd_poster_base_url) + "/" + getString(R.string.tmd_image_size) + poster_path;
-        Picasso.with(this).load(path).into(detail_image);
-
-
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     }
 

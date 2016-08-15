@@ -45,6 +45,10 @@ public class MovieDBContract {
             // CA/movies/{id} -> id (i.e. 2nd path segment)
             return uri.getPathSegments().get(1);
         }
+
+        public static Uri buildMovieUriWithMovieId(String movieId) {
+            return CONTENT_URI.buildUpon().appendPath(movieId).build();
+        }
     }
 
 }

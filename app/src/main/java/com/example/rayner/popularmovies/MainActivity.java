@@ -2,6 +2,7 @@ package com.example.rayner.popularmovies;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
@@ -12,9 +13,11 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MainActivityFragment.MovieCallback {
 
+    private static final String DETAILACTIVITYFRAGMENT_TAG = "DFTAG";
     private String mSort_order;
+    private boolean mTwoPane;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,6 +27,24 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        if(findViewById(R.id.movie_detail_container) != null) {
+            // Movie container view present in layout-sw600dp
+            mTwoPane = true;
+
+            // If being restored from previous state, avoid overlapping fragments
+            if(savedInstanceState != null) {
+                return;
+            }
+
+            // Show detail view in this activity by adding/replacing detail fragment using fragment transaction
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.movie_detail_container, new DetailActivityFragment(), DETAILACTIVITYFRAGMENT_TAG)
+                    .commit();
+        }
+        else {
+            mTwoPane = false;
+        }
 
     }
 
@@ -60,5 +81,27 @@ public class MainActivity extends AppCompatActivity {
             mSort_order = sort_order;
         }
         super.onResume();
+    }
+
+    @Override
+    public void onItemSelected(Uri movieUri) {
+        if (mTwoPane) {
+            // In two-pane mode, show the detail view in this activity by
+            // adding or replacing the detail fragment using a
+            // fragment transaction.
+            Bundle args = new Bundle();
+            args.putParcelable(DetailActivityFragment.DETAIL_URI, movieUri);
+
+            DetailActivityFragment fragment = new DetailActivityFragment();
+            fragment.setArguments(args);
+
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.movie_detail_container, fragment, DETAILACTIVITYFRAGMENT_TAG)
+                    .commit();
+        } else {
+            Intent intent = new Intent(this, DetailActivity.class)
+                    .setData(movieUri);
+            startActivity(intent);
+        }
     }
 }

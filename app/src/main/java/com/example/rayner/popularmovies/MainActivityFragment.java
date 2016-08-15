@@ -72,6 +72,18 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     static final int COL_POPULARITY     = 8;
 
 
+    /**
+     * A callback interface that all activities containing this fragment must
+     * implement. This mechanism allows activities to be notified of item
+     * selections.
+     */
+    public interface MovieCallback {
+        /**
+         * DetailFragmentCallback for when an item has been selected.
+         */
+        public void onItemSelected(Uri movieUri);
+    }
+
 
     public MainActivityFragment() {
 
@@ -163,20 +175,9 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
             public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
                 //Get item at position
                 Cursor item = (Cursor) parent.getItemAtPosition(position);
-
-                Intent intent = new Intent(getActivity(), DetailActivity.class);
-
-                if(item!=null) {
-
-                    //Pass MovieItem details
-                    intent.putExtra("original_title", item.getString(COL_ORIGINAL_TITLE)).
-                            putExtra("poster_path", item.getString(COL_POSTER_PATH)).
-                            putExtra("overview", item.getString(COL_OVERVIEW)).
-                            putExtra("vote_average", item.getString(COL_VOTE_AVERAGE)).
-                            putExtra("release_date", item.getString(COL_RELEASE_DATE));
-
-                    //Start details activity
-                    startActivity(intent);
+                if(null != item) {
+                    ((MovieCallback) getActivity())
+                            .onItemSelected(MovieDBContract.MovieEntry.buildMovieUriWithMovieId(item.getString(COL_MOVIE_ID)));
                 }
             }
         });
