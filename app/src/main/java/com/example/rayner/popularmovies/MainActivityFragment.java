@@ -44,6 +44,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
 
     private static final String LOG_TAG = MainActivityFragment.class.getSimpleName();
     private static final int MOVIE_LOADER = 101;
+    private static final String SELECTED_KEY = "selected_position";
     private GridView mGridView;
     private MovieAdapter movieAdapter;
 
@@ -70,6 +71,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     static final int COL_RELEASE_DATE   = 6;
     static final int COL_FAVORITE       = 7;
     static final int COL_POPULARITY     = 8;
+    private int mPosition = GridView.INVALID_POSITION;
 
 
     /**
@@ -179,8 +181,14 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                     ((MovieCallback) getActivity())
                             .onItemSelected(MovieDBContract.MovieEntry.buildMovieUriWithMovieId(item.getString(COL_MOVIE_ID)));
                 }
+                mPosition = position;
             }
         });
+
+        // Mine SavedInstanceState
+        if (savedInstanceState != null && savedInstanceState.containsKey(SELECTED_KEY)) {
+            mPosition = savedInstanceState.getInt(SELECTED_KEY);
+        }
 
         return rootView;
     }
@@ -199,6 +207,14 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        if(mPosition != GridView.INVALID_POSITION) {
+            outState.putInt(SELECTED_KEY, mPosition);
+        }
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -231,6 +247,10 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         movieAdapter.swapCursor(data);
+        if(mPosition != GridView.INVALID_POSITION) {
+            mGridView.smoothScrollToPosition(mPosition);
+        }
+        mGridView.setSelection(mPosition);
     }
 
     @SuppressLint("NewApi")
