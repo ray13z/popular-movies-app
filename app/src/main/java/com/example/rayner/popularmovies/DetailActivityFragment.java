@@ -5,7 +5,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.Nullable;
@@ -15,15 +14,18 @@ import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
-import android.widget.ListView;
 import android.widget.TextView;
 
+import com.example.rayner.popularmovies.model.MovieDBReviews;
 import com.example.rayner.popularmovies.model.MovieDBVideos;
+import com.example.rayner.popularmovies.model.MovieReview;
 import com.example.rayner.popularmovies.model.MovieVideo;
 import com.example.rayner.popularmovies.model.db.MovieDBContract;
 import com.squareup.picasso.Picasso;
@@ -47,11 +49,14 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     static final String DETAIL_URI = "URI";
     private static final int DETAIL_LOADER = 201;
     private static final int DETAIL_VIDEO_LOADER = 202;
+    private static final int DETAIL_REVIEW_LOADER = 203;
     private static final String LOG_TAG = DetailActivityFragment.class.getSimpleName();
 
     private Uri mUri;
     private Uri mVideoByIdUri;
+    private Uri mReviewByIdUri;
     private String mMovieId;
+    private LayoutInflater mLayoutInflater;
 
     // Setup Butterknife views
     @BindView(R.id.detail_title) TextView detail_title;
@@ -59,6 +64,11 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     @BindView(R.id.detail_rating) TextView detail_rating;
     @BindView(R.id.detail_overview) TextView detail_overview;
     @BindView(R.id.detail_image) ImageView detail_image;
+    @BindView(R.id.detail_trailer_heading) TextView detail_trailer_heading;
+    @BindView(R.id.detail_trailer_divider) View detail_trailer_divider;
+    @BindView(R.id.detail_review_heading) TextView detail_review_heading;
+    @BindView(R.id.detail_review_divider) View detail_review_divider;
+    @BindView(R.id.detail_instructions) TextView detail_instructions;
 
     // Movie DB projection
     private static final String[] MOVIE_COLUMNS = {
@@ -100,6 +110,24 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     static final int VID_COL_NAME       = 3;
     static final int VID_COL_SITE       = 4;
 
+    // Review DB Projection
+    private static final String[] REVIEW_COLUMNS = {
+            MovieDBContract.ReviewEntry._ID,
+            MovieDBContract.ReviewEntry.COLUMN_MOVIE_ID,
+            MovieDBContract.ReviewEntry.COLUMNS_REVIEW_ID,
+            MovieDBContract.ReviewEntry.COLUMNS_AUTHOR,
+            MovieDBContract.ReviewEntry.COLUMNS_CONTENT,
+            MovieDBContract.ReviewEntry.COLUMNS_URL
+    };
+
+    // REVIEW_COLUMNS column indices
+    static final int REVIEW__ID            = 0;
+    static final int REVIEW_COL_MOVIE_ID   = 1;
+    static final int REVIEW_COL_REVIEW_ID  = 2;
+    static final int REVIEW_COL_AUTHOR     = 3;
+    static final int REVIEW_COL_CONTENT    = 4;
+    static final int REVIEW_COL_URL        = 5;
+
     public DetailActivityFragment() {
     }
 
@@ -107,6 +135,9 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_detail, container, false);
+
+        mLayoutInflater = inflater;
+
         ButterKnife.bind(this, view);
 
         // Get the bundle arguments to populate mUri
@@ -115,6 +146,7 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
             mUri = args.getParcelable(DetailActivityFragment.DETAIL_URI);
             mMovieId = MovieDBContract.MovieEntry.getIdFromUri(mUri);
             mVideoByIdUri = MovieDBContract.VideoEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build();
+            mReviewByIdUri = MovieDBContract.ReviewEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build();
         }
 
         return view;
@@ -124,13 +156,28 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         getLoaderManager().initLoader(DETAIL_LOADER, null, this);
         getLoaderManager().initLoader(DETAIL_VIDEO_LOADER, null, this);
+        getLoaderManager().initLoader(DETAIL_REVIEW_LOADER, null, this);
         super.onActivityCreated(savedInstanceState);
     }
 
     @Override
     public void onResume() {
         if(null != mMovieId) {
+            // Show instructions and hide trailer/review headers
+            detail_instructions.setVisibility(View.INVISIBLE);
+            detail_trailer_divider.setVisibility(View.VISIBLE);
+            detail_trailer_heading.setVisibility(View.VISIBLE);
+            detail_review_heading.setVisibility(View.VISIBLE);
+            detail_review_divider.setVisibility(View.VISIBLE);
             loadTrailers(this);
+            loadReviews(this);
+        } else {
+            // Show instructions and hide trailer/review headers
+            detail_instructions.setVisibility(View.VISIBLE);
+            detail_trailer_divider.setVisibility(View.INVISIBLE);
+            detail_trailer_heading.setVisibility(View.INVISIBLE);
+            detail_review_heading.setVisibility(View.INVISIBLE);
+            detail_review_divider.setVisibility(View.INVISIBLE);
         }
         super.onResume();
     }
@@ -159,6 +206,19 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
                             getActivity(),
                             mVideoByIdUri,
                             VIDEO_COLUMNS,
+                            null,
+                            null,
+                            null
+                    );
+                }
+                break;
+
+            case DETAIL_REVIEW_LOADER:
+                if (null != mReviewByIdUri) {
+                    return new CursorLoader(
+                            getActivity(),
+                            mReviewByIdUri,
+                            REVIEW_COLUMNS,
                             null,
                             null,
                             null
@@ -194,10 +254,11 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
                 break;
 
             case DETAIL_VIDEO_LOADER:
-                Log.d(LOG_TAG, "DETAIL_VIDEO_LOADER load finished. Items = " + data.getCount());
 
                 // Load a layout inflater
-                LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                if(null == mLayoutInflater) {
+                    mLayoutInflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                }
 
                 // Set insert point
                 ViewGroup trailerContainer = (ViewGroup) getActivity().findViewById(R.id.detail_trailer_container);
@@ -207,7 +268,7 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
                 try {
                     while(data.moveToNext()) {
                         // Load view
-                        View trailerView = inflater.inflate(R.layout.list_item_trailer, null);
+                        View trailerView = mLayoutInflater.inflate(R.layout.list_item_trailer, null);
 
                         // Set trailer name
                         TextView textView = (TextView) trailerView.findViewById(R.id.list_item_trailer_name);
@@ -246,16 +307,106 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
 
                         // Refresh
                         trailerContainer.invalidate();
-                        Log.d(LOG_TAG, "trailer container invalidated.");
+//                        Log.d(LOG_TAG, "trailer container invalidated.");
                     }
                 } finally {
                     data.close();
                 }
                 break;
 
+            case DETAIL_REVIEW_LOADER:
+
+                // Load a layout inflater
+                if(null == mLayoutInflater) {
+                    mLayoutInflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                }
+
+                // Set insert point
+                ViewGroup reviewContainer = (ViewGroup) getActivity().findViewById(R.id.detail_review_container);
+
+                reviewContainer.removeAllViews();
+
+                try {
+                    while (data.moveToNext()) {
+                        // Load view
+                        View trailerView = mLayoutInflater.inflate(R.layout.list_item_review, null);
+
+                        // Set review author name
+                        TextView authorTextView = (TextView) trailerView.findViewById(R.id.list_item_review_author);
+                        authorTextView.setText(data.getString(REVIEW_COL_AUTHOR));
+
+                        // Set review content
+                        final TextView contentTextView = (TextView) trailerView.findViewById(R.id.list_item_review_content);
+                        contentTextView.setEllipsize(TextUtils.TruncateAt.END);
+                        contentTextView.setText(data.getString(REVIEW_COL_CONTENT));
+                        contentTextView.setMaxLines(4);
+
+                        // Set collapsible textview
+                        final View expandMoreView = trailerView.findViewById(R.id.list_item_expand_more);
+                        final View expandLessView = trailerView.findViewById(R.id.list_item_expand_less);
+
+                        // Tidy up - only show ic_expand_more if ellipsized
+                        setupCollapsibleReviewTextView(contentTextView, expandMoreView);
+
+                        contentTextView.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                expandCollapseReviewTextView(view, expandMoreView, expandLessView);
+                            }
+                        });
+
+                        // insert the view
+                        reviewContainer.addView(trailerView, new AppBarLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, AppBarLayout.LayoutParams.MATCH_PARENT));
+
+                        // Refresh
+                        reviewContainer.invalidate();
+                    }
+                } finally {
+                    data.close();
+                }
+            break;
+
             default:
                 Log.e(LOG_TAG, "invalid Loader ID " + loader.getId());
                 break;
+        }
+    }
+
+    private void setupCollapsibleReviewTextView(final TextView contentTextView, final View expandMoreView) {
+        ViewTreeObserver viewTreeObserver = contentTextView.getViewTreeObserver();
+        viewTreeObserver.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                int lineCount = contentTextView.getLineCount();
+
+                if (contentTextView.getLayout().getEllipsisCount(lineCount-1) == 0) {
+                    // Hide ic_expand_more
+                    expandMoreView.setVisibility(View.INVISIBLE);
+                    removeOnGlobalLayoutListener(this, contentTextView);    // Remove the Layout listener
+                }
+            }
+        });
+    }
+
+    private void removeOnGlobalLayoutListener(ViewTreeObserver.OnGlobalLayoutListener onGlobalLayoutListener, TextView contentTextView) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            contentTextView.getViewTreeObserver().removeOnGlobalLayoutListener(onGlobalLayoutListener);
+        }
+        else {
+            contentTextView.getViewTreeObserver().removeGlobalOnLayoutListener(onGlobalLayoutListener);
+        }
+    }
+
+    private void expandCollapseReviewTextView(View view, View expandMoreView, View expandLessView) {
+        if(expandLessView.getVisibility() == View.INVISIBLE) {
+            expandMoreView.setVisibility(View.INVISIBLE);
+            expandLessView.setVisibility(View.VISIBLE);
+            ((TextView) view).setMaxLines(Integer.MAX_VALUE);
+        }
+        else {
+            expandMoreView.setVisibility(View.VISIBLE);
+            expandLessView.setVisibility(View.INVISIBLE);
+            ((TextView) view).setMaxLines(4);
         }
     }
 
@@ -290,13 +441,54 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
                             contentValuesVector.toArray(contentValuesArray);
                             inserted = getContext().getContentResolver().bulkInsert(MovieDBContract.VideoEntry.CONTENT_URI, contentValuesArray);
 
-                            Log.d(LOG_TAG, inserted + " trailers added to DB");        // Reload the trailer loader
                             getLoaderManager().restartLoader(DETAIL_VIDEO_LOADER, null, detailActivityFragment);
                         }
                     }
 
                     @Override
                     public void onFailure(Call<MovieDBVideos<MovieVideo>> call, Throwable t) {
+                        Log.e(LOG_TAG, call.request().url() + ": failed: " + t);
+                    }
+                });
+    }
+
+    private void loadReviews(final DetailActivityFragment detailActivityFragment) {
+        // Prepare the canons!
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(getString(R.string.tmd_base_url))
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        MovieDBAPI movieDBAPI = retrofit.create(MovieDBAPI.class);
+
+        movieDBAPI.loadReviews(mMovieId, getString(R.string.api_key))
+                .enqueue(new Callback<MovieDBReviews<MovieReview>>() {
+                    @Override
+                    public void onResponse(Call<MovieDBReviews<MovieReview>> call, Response<MovieDBReviews<MovieReview>> response) {
+                        List<MovieReview> movieReviewList = response.body().getReviews();
+
+                        // Create ContentValues Vector
+                        Vector<ContentValues> contentValuesVector = new Vector<>(movieReviewList.size());
+
+                        for (MovieReview video : movieReviewList) {
+                            ContentValues cv = video.getContentValues();
+                            cv.put(MovieDBContract.ReviewEntry.COLUMN_MOVIE_ID, mMovieId);
+                            contentValuesVector.add(cv);
+                        }
+
+                        int inserted = 0;
+                        // add to database
+                        if ( contentValuesVector.size() > 0 ) {
+                            ContentValues[] contentValuesArray = new ContentValues[contentValuesVector.size()];
+                            contentValuesVector.toArray(contentValuesArray);
+                            inserted = getContext().getContentResolver().bulkInsert(MovieDBContract.ReviewEntry.CONTENT_URI, contentValuesArray);
+
+                            getLoaderManager().restartLoader(DETAIL_REVIEW_LOADER, null, detailActivityFragment);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<MovieDBReviews<MovieReview>> call, Throwable t) {
                         Log.e(LOG_TAG, call.request().url() + ": failed: " + t);
                     }
                 });

@@ -11,4 +11,6 @@
     <string name="uri_authority">api.themoviedb.org</string>
     <string name="api_key">enter_api_key_here</string>
     <string name="detail_trailer_heading">Trailers</string>
+    <string name="detail_review_heading">Reviews</string>
+    <string name="detail_instructions">Select a movie from the list to view details.</string>
 </resources>

@@ -15,6 +15,7 @@ public class MovieDBContract {
     public static final String PATH_POPULAR = "popular";
     public static final String PATH_TOP_RATED = "top_rated";
     public static final String PATH_VIDEOS = "videos";
+    public static final String PATH_REVIEWS = "reviews";
 
     public static final class MovieEntry implements BaseColumns {
 
@@ -63,6 +64,30 @@ public class MovieDBContract {
         public static final String COLUMN_KEY = "key";
         public static final String COLUMN_NAME = "name";
         public static final String COLUMN_SITE = "site";
+        public static final String COLUMN_MOVIE_ID = "id";
+
+        public static Uri buildMovieUri(long id) {
+            return ContentUris.withAppendedId(CONTENT_URI, id);
+        }
+
+        public static String getIdFromUri(Uri uri) {
+            // CA/videos/{id} -> id (i.e. 2nd path segment)
+            return uri.getPathSegments().get(1);
+        }
+    }
+
+    public static final class ReviewEntry implements BaseColumns {
+        public static final Uri CONTENT_URI = BASE_CONTENT_URI.buildUpon().appendPath(PATH_REVIEWS).build();
+
+        public static final String CONTENT_TYPE = ContentResolver.CURSOR_DIR_BASE_TYPE + "/" +
+                CONTENT_AUTHORITY + "/" +
+                PATH_REVIEWS;
+
+        public static final String TABLE_NAME = "reviews";
+        public static final String COLUMNS_REVIEW_ID = "review_id";
+        public static final String COLUMNS_AUTHOR = "author";
+        public static final String COLUMNS_CONTENT = "content";
+        public static final String COLUMNS_URL = "url";
         public static final String COLUMN_MOVIE_ID = "id";
 
         public static Uri buildMovieUri(long id) {

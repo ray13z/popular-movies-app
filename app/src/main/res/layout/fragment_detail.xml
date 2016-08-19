@@ -110,6 +110,20 @@
             android:orientation="vertical"
             android:padding="@dimen/padding_small">
 
+            <!-- - - - -  -->
+            <!-- Trailers -->
+            <!-- - - - -  -->
+            <TextView
+                android:id="@+id/detail_instructions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_size_med"
+                android:text="@string/detail_instructions"/>
+
+            <!-- - - - -  -->
+            <!-- Trailers -->
+            <!-- - - - -  -->
+
             <TextView
                 android:id="@+id/detail_trailer_heading"
                 android:layout_width="match_parent"
@@ -119,6 +133,7 @@
 
             <!-- Divider -->
             <View
+                android:id="@+id/detail_trailer_divider"
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
                 android:background="?android:attr/listDivider"/>
@@ -128,6 +143,31 @@
                 android:layout_width="match_parent"
                 android:layout_height="fill_parent"
                 android:orientation="vertical" />
+
+            <!-- - - - -  -->
+            <!-- Reviews  -->
+            <!-- - - - -  -->
+
+            <TextView
+                android:id="@+id/detail_review_heading"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/detail_review_heading"
+                android:textSize="@dimen/text_size_med" />
+
+            <!-- Divider -->
+            <View
+                android:id="@+id/detail_review_divider"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:background="?android:attr/listDivider"/>
+
+            <LinearLayout
+                android:id="@+id/detail_review_container"
+                android:layout_width="match_parent"
+                android:layout_height="fill_parent"
+                android:orientation="vertical" />
+
 
         </LinearLayout>
 

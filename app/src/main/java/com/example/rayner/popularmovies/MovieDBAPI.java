@@ -1,8 +1,10 @@
 package com.example.rayner.popularmovies;
 
+import com.example.rayner.popularmovies.model.MovieDBReviews;
 import com.example.rayner.popularmovies.model.MovieDBVideos;
 import com.example.rayner.popularmovies.model.MovieItem;
 import com.example.rayner.popularmovies.model.MovieDBMovies;
+import com.example.rayner.popularmovies.model.MovieReview;
 import com.example.rayner.popularmovies.model.MovieVideo;
 
 import retrofit2.Call;
@@ -20,4 +22,7 @@ public interface MovieDBAPI {
 
     @GET("/3/movie/{id}/videos")
     Call<MovieDBVideos<MovieVideo>> loadVideos(@Path("id") String id, @Query("api_key") String api_key);
+
+    @GET("/3/movie/{id}/reviews")
+    Call<MovieDBReviews<MovieReview>> loadReviews(@Path("id") String id, @Query("api_key") String api_key);
 }
