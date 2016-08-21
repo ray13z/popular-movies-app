@@ -5,10 +5,10 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -22,8 +22,8 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.GridView;
 
-import com.example.rayner.popularmovies.model.MovieItem;
 import com.example.rayner.popularmovies.model.MovieDBMovies;
+import com.example.rayner.popularmovies.model.MovieItem;
 import com.example.rayner.popularmovies.model.db.MovieDBContract;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -47,6 +47,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     private static final String SELECTED_KEY = "selected_position";
     private GridView mGridView;
     private MovieAdapter movieAdapter;
+    private int mPosition = GridView.INVALID_POSITION;
 
     // Movie DB projection
     private static final String[] MOVIE_COLUMNS = {
@@ -57,7 +58,6 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
             MovieDBContract.MovieEntry.COLUMN_OVERVIEW,
             MovieDBContract.MovieEntry.COLUMN_VOTE_AVERAGE,
             MovieDBContract.MovieEntry.COLUMN_RELEASE_DATE,
-            MovieDBContract.MovieEntry.COLUMN_FAVORITE,
             MovieDBContract.MovieEntry.COLUMN_POPULARITY,
     };
 
@@ -69,10 +69,19 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     static final int COL_OVERVIEW       = 4;
     static final int COL_VOTE_AVERAGE   = 5;
     static final int COL_RELEASE_DATE   = 6;
-    static final int COL_FAVORITE       = 7;
-    static final int COL_POPULARITY     = 8;
-    private int mPosition = GridView.INVALID_POSITION;
+    static final int COL_POPULARITY     = 7;
 
+    // Favorites projection (INNER JOIN)
+    private static final String[] FAVORITE_COLUMNS = {
+            MovieDBContract.MovieEntry.TABLE_NAME + "." + MovieDBContract.MovieEntry._ID,
+            MovieDBContract.MovieEntry.TABLE_NAME + "." + MovieDBContract.MovieEntry.COLUMN_MOVIE_ID,
+            MovieDBContract.FavoriteEntry.COLUMN_POSTER
+    };
+
+    // FAVORITE_COLUMNS column indices
+    static final int _FAV_ID                = 0;
+    static final int COL_FAV_MOVIE_ID       = 1;
+    static final int COL_FAV_POSTER         = 2;
 
     /**
      * A callback interface that all activities containing this fragment must
@@ -116,7 +125,12 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
 
         String sort_by_pref = PreferenceManager.getDefaultSharedPreferences(getActivity()).getString(getString(R.string.pref_sort_by_key), getString(R.string.pref_sort_by_default_value));
 
+        if (sort_by_pref.equals("popular") || sort_by_pref.equals("top_rated")) {
+            loadMoviesFromAPI(sort_by_pref);
+        }
+    }
 
+    private void loadMoviesFromAPI(String sort_by_pref) {
         // Retrofit calls
         Gson gson = new GsonBuilder()
                 .setDateFormat("yyyy-MM-dd")
@@ -229,6 +243,18 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         }
         else if(sort_by_pref.equals("top_rated")) {
             uri = uri.buildUpon().appendPath(MovieDBContract.PATH_TOP_RATED).build();
+        }
+        else if(sort_by_pref.equals("favorites")) {
+            uri = MovieDBContract.FavoriteEntry.CONTENT_URI;
+
+            // Return CursorLoader to handle MovieDBProvider's sFavoritesQueryBuilder INNER JOIN
+            return new CursorLoader(getContext(),
+                    uri,
+                    FAVORITE_COLUMNS,
+                    null,
+                    null,
+                    null
+            );
         }
         else {
             Log.e(LOG_TAG, "Error: Illegal pref_sort_by_key " + sort_by_pref);

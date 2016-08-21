@@ -15,7 +15,6 @@ public class MovieItem {
     private String poster_path; // only path
     private double popularity;
     private double vote_average; // userRating
-    private int favorite = 0;
 
 
     public String getId() { return id; }
@@ -44,14 +43,6 @@ public class MovieItem {
         return vote_average;
     }
 
-    public int getFavorite() {
-        return favorite;
-    }
-
-    public void setFavorite(int favorite) {
-        this.favorite = favorite;
-    }
-
     public ContentValues getContentValues() {
         ContentValues movieValues = new ContentValues();
 
@@ -62,7 +53,6 @@ public class MovieItem {
         movieValues.put(MovieDBContract.MovieEntry.COLUMN_POSTER_PATH, poster_path);
         movieValues.put(MovieDBContract.MovieEntry.COLUMN_POPULARITY, popularity);
         movieValues.put(MovieDBContract.MovieEntry.COLUMN_VOTE_AVERAGE, vote_average);
-        movieValues.put(MovieDBContract.MovieEntry.COLUMN_FAVORITE, favorite);
 
         return movieValues;
     }

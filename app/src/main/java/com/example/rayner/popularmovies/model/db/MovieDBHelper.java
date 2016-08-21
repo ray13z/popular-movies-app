@@ -4,9 +4,10 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import com.example.rayner.popularmovies.model.db.MovieDBContract.FavoriteEntry;
 import com.example.rayner.popularmovies.model.db.MovieDBContract.MovieEntry;
-import com.example.rayner.popularmovies.model.db.MovieDBContract.VideoEntry;
 import com.example.rayner.popularmovies.model.db.MovieDBContract.ReviewEntry;
+import com.example.rayner.popularmovies.model.db.MovieDBContract.VideoEntry;
 
 /**
  * Created by rayner on 4/8/16.
@@ -24,7 +25,6 @@ public class MovieDBHelper extends SQLiteOpenHelper {
             MovieEntry.COLUMN_OVERVIEW + " TEXT NOT NULL, " +
             MovieEntry.COLUMN_VOTE_AVERAGE + " REAL NOT NULL, " +
             MovieEntry.COLUMN_RELEASE_DATE + " TEXT NOT NULL, " +
-            MovieEntry.COLUMN_FAVORITE + " INTEGER NOT NULL, " +
             MovieEntry.COLUMN_POPULARITY + " REAL NOT NULL " +
             ");";
 
@@ -51,6 +51,15 @@ public class MovieDBHelper extends SQLiteOpenHelper {
             MovieEntry.TABLE_NAME + " (" + MovieEntry.COLUMN_MOVIE_ID + ") " +
             ");";
 
+    private static final String SQL_CREATE_FAVORITES_TABLE = "CREATE TABLE " + FavoriteEntry.TABLE_NAME + " (" +
+            FavoriteEntry._ID + " INTEGER PRIMARY KEY, " +
+            FavoriteEntry.COLUMN_MOVIE_ID + " INTEGER UNIQUE NOT NULL, " +
+            FavoriteEntry.COLUMN_POSTER + " BLOB NOT NULL, " +
+            // Set up the location column as a foreign key to location table.
+            " FOREIGN KEY (" + FavoriteEntry.COLUMN_MOVIE_ID + ") REFERENCES " +
+            MovieEntry.TABLE_NAME + " (" + MovieEntry.COLUMN_MOVIE_ID + ") " +
+            ");";
+
     public MovieDBHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -60,6 +69,7 @@ public class MovieDBHelper extends SQLiteOpenHelper {
         sqLiteDatabase.execSQL(SQL_CREATE_MOVIES_TABLE);
         sqLiteDatabase.execSQL(SQL_CREATE_VIDEOS_TABLE);
         sqLiteDatabase.execSQL(SQL_CREATE_REVIEWS_TABLE);
+        sqLiteDatabase.execSQL(SQL_CREATE_FAVORITES_TABLE);
     }
 
     @Override
@@ -67,6 +77,7 @@ public class MovieDBHelper extends SQLiteOpenHelper {
         sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + MovieEntry.TABLE_NAME);
         sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + VideoEntry.TABLE_NAME);
         sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + ReviewEntry.TABLE_NAME);
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + FavoriteEntry.TABLE_NAME);
         onCreate(sqLiteDatabase);
     }
 }

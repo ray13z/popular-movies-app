@@ -16,6 +16,7 @@ public class MovieDBContract {
     public static final String PATH_TOP_RATED = "top_rated";
     public static final String PATH_VIDEOS = "videos";
     public static final String PATH_REVIEWS = "reviews";
+    public static final String PATH_FAVORITES = "favorites";
 
     public static final class MovieEntry implements BaseColumns {
 
@@ -35,7 +36,6 @@ public class MovieDBContract {
         public static final String COLUMN_OVERVIEW = "overview";
         public static final String COLUMN_VOTE_AVERAGE = "vote_average";
         public static final String COLUMN_RELEASE_DATE = "release_date";
-        public static final String COLUMN_FAVORITE = "favorite"; // Stores 1: yes and 0: no
         public static final String COLUMN_POPULARITY = "popularity";
 
         // To use with 'insert' - return Uri with row id
@@ -66,7 +66,7 @@ public class MovieDBContract {
         public static final String COLUMN_SITE = "site";
         public static final String COLUMN_MOVIE_ID = "id";
 
-        public static Uri buildMovieUri(long id) {
+        public static Uri buildVideoUri(long id) {
             return ContentUris.withAppendedId(CONTENT_URI, id);
         }
 
@@ -90,7 +90,32 @@ public class MovieDBContract {
         public static final String COLUMNS_URL = "url";
         public static final String COLUMN_MOVIE_ID = "id";
 
-        public static Uri buildMovieUri(long id) {
+        public static Uri buildReviewUri(long id) {
+            return ContentUris.withAppendedId(CONTENT_URI, id);
+        }
+
+        public static String getIdFromUri(Uri uri) {
+            // CA/videos/{id} -> id (i.e. 2nd path segment)
+            return uri.getPathSegments().get(1);
+        }
+    }
+
+    public static final class FavoriteEntry implements BaseColumns {
+
+        public static final Uri CONTENT_URI = BASE_CONTENT_URI.buildUpon().appendPath(PATH_FAVORITES).build();
+
+        public static final String CONTENT_TYPE = ContentResolver.CURSOR_DIR_BASE_TYPE + "/" +
+                CONTENT_AUTHORITY + "/" +
+                PATH_FAVORITES;
+        public static final String CONTENT_ITEM_TYPE = ContentResolver.CURSOR_ITEM_BASE_TYPE + "/" +
+                CONTENT_AUTHORITY + "/" +
+                PATH_FAVORITES;
+
+        public static final String TABLE_NAME = "favorites";
+        public static final String COLUMN_MOVIE_ID = "id";
+        public static final String COLUMN_POSTER = "poster";
+
+        public static Uri buildFavoriteUri(long id) {
             return ContentUris.withAppendedId(CONTENT_URI, id);
         }
 

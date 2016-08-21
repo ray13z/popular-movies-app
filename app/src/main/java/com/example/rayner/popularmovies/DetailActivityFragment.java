@@ -5,12 +5,14 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.design.widget.AppBarLayout;
 import android.support.v4.app.Fragment;
-import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -20,8 +22,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.rayner.popularmovies.model.MovieDBReviews;
 import com.example.rayner.popularmovies.model.MovieDBVideos;
@@ -30,6 +34,8 @@ import com.example.rayner.popularmovies.model.MovieVideo;
 import com.example.rayner.popularmovies.model.db.MovieDBContract;
 import com.squareup.picasso.Picasso;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Vector;
 
@@ -51,6 +57,8 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     private static final int DETAIL_VIDEO_LOADER = 202;
     private static final int DETAIL_REVIEW_LOADER = 203;
     private static final String LOG_TAG = DetailActivityFragment.class.getSimpleName();
+    private static String sFavoriteByIdSelection = MovieDBContract.FavoriteEntry.TABLE_NAME + "." + MovieDBContract.FavoriteEntry.COLUMN_MOVIE_ID +
+            " = ? ";
 
     private Uri mUri;
     private Uri mVideoByIdUri;
@@ -69,6 +77,7 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     @BindView(R.id.detail_review_heading) TextView detail_review_heading;
     @BindView(R.id.detail_review_divider) View detail_review_divider;
     @BindView(R.id.detail_instructions) TextView detail_instructions;
+    @BindView(R.id.detail_favorite) CheckBox detail_favorite;
 
     // Movie DB projection
     private static final String[] MOVIE_COLUMNS = {
@@ -79,7 +88,6 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
             MovieDBContract.MovieEntry.COLUMN_OVERVIEW,
             MovieDBContract.MovieEntry.COLUMN_VOTE_AVERAGE,
             MovieDBContract.MovieEntry.COLUMN_RELEASE_DATE,
-            MovieDBContract.MovieEntry.COLUMN_FAVORITE,
             MovieDBContract.MovieEntry.COLUMN_POPULARITY
     };
 
@@ -128,6 +136,18 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     static final int REVIEW_COL_CONTENT    = 4;
     static final int REVIEW_COL_URL        = 5;
 
+    // Favorite DB Projection
+    private static final String[] FAVORITE_COLUMNS = {
+            MovieDBContract.FavoriteEntry._ID,
+            MovieDBContract.FavoriteEntry.COLUMN_MOVIE_ID,
+            MovieDBContract.FavoriteEntry.COLUMN_POSTER
+    };
+
+    // FAVORITE_COLUMNS column indices
+    static final int FAVORITE_ID            = 0;
+    static final int FAVORITE_COL_MOVIE_ID  = 1;
+    static final int FAVORITE_COL_POSTER    = 2;
+
     public DetailActivityFragment() {
     }
 
@@ -149,7 +169,43 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
             mReviewByIdUri = MovieDBContract.ReviewEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build();
         }
 
+        // Setup Favorite onClick events
+        detail_favorite.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(((CheckBox) view).isChecked()) {
+                    Uri inserted = getContext().getContentResolver().insert(MovieDBContract.FavoriteEntry.CONTENT_URI, getFavoritesContentValues());
+                    Toast.makeText(getContext(), "Added to favorites!", Toast.LENGTH_SHORT).show();
+                }
+                else {
+                    int deleted = getContext().getContentResolver().delete(MovieDBContract.FavoriteEntry.CONTENT_URI, sFavoriteByIdSelection , new String[] { mMovieId });
+                    Toast.makeText(getContext(), "Removed from  favorites!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
         return view;
+    }
+
+    private ContentValues getFavoritesContentValues() {
+        ContentValues values = new ContentValues();
+        values.put(MovieDBContract.FavoriteEntry.COLUMN_MOVIE_ID, mMovieId);
+        values.put(MovieDBContract.FavoriteEntry.COLUMN_POSTER, getBitmapPosterData());
+        return values;
+    }
+
+    private byte[] getBitmapPosterData() {
+        Bitmap bitmap = ((BitmapDrawable) detail_image.getDrawable()).getBitmap();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 0, outputStream);
+        byte[] bitStream = outputStream.toByteArray();
+        try {
+            outputStream.close();
+        } catch (IOException e) {
+//            e.printStackTrace();
+            Log.e(LOG_TAG, e.getLocalizedMessage());
+        }
+        return bitStream;
     }
 
     @Override
@@ -169,6 +225,11 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
             detail_trailer_heading.setVisibility(View.VISIBLE);
             detail_review_heading.setVisibility(View.VISIBLE);
             detail_review_divider.setVisibility(View.VISIBLE);
+            detail_favorite.setVisibility(View.VISIBLE);
+
+            // Set favorite button state
+            detail_favorite.setChecked(isMovieFavorited());
+
             loadTrailers(this);
             loadReviews(this);
         } else {
@@ -178,8 +239,22 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
             detail_trailer_heading.setVisibility(View.INVISIBLE);
             detail_review_heading.setVisibility(View.INVISIBLE);
             detail_review_divider.setVisibility(View.INVISIBLE);
+            detail_favorite.setVisibility(View.INVISIBLE);
         }
         super.onResume();
+    }
+
+    private boolean isMovieFavorited() {
+        if (getContext().getContentResolver().query(
+                MovieDBContract.FavoriteEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build(),
+                FAVORITE_COLUMNS,
+                null,
+                null,
+                null
+        ).getCount() > 0) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -307,7 +382,6 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
 
                         // Refresh
                         trailerContainer.invalidate();
-//                        Log.d(LOG_TAG, "trailer container invalidated.");
                     }
                 } finally {
                     data.close();
@@ -423,25 +497,28 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
                 .enqueue(new Callback<MovieDBVideos<MovieVideo>>() {
                     @Override
                     public void onResponse(Call<MovieDBVideos<MovieVideo>> call, Response<MovieDBVideos<MovieVideo>> response) {
-                        List<MovieVideo> movieVideoList = response.body().getVideos();
+                        if(null != response) {
+                            List<MovieVideo> movieVideoList = response.body().getVideos();
 
-                        // Create ContentValues Vector
-                        Vector<ContentValues> contentValuesVector = new Vector<>(movieVideoList.size());
+                            // Create ContentValues Vector
+                            Vector<ContentValues> contentValuesVector = new Vector<>(movieVideoList.size());
 
-                        for (MovieVideo video : movieVideoList) {
-                            ContentValues cv = video.getContentValues();
-                            cv.put(MovieDBContract.VideoEntry.COLUMN_MOVIE_ID, mMovieId);
-                            contentValuesVector.add(cv);
-                        }
+                            for (MovieVideo video : movieVideoList) {
+                                ContentValues cv = video.getContentValues();
+                                cv.put(MovieDBContract.VideoEntry.COLUMN_MOVIE_ID, mMovieId);
+                                contentValuesVector.add(cv);
+                            }
 
-                        int inserted = 0;
-                        // add to database
-                        if ( contentValuesVector.size() > 0 ) {
-                            ContentValues[] contentValuesArray = new ContentValues[contentValuesVector.size()];
-                            contentValuesVector.toArray(contentValuesArray);
-                            inserted = getContext().getContentResolver().bulkInsert(MovieDBContract.VideoEntry.CONTENT_URI, contentValuesArray);
+                            int inserted = 0;
+                            // add to database
+                            // Changelog - added NPE check for getContentResolver()
+                            if (null != getContext() && contentValuesVector.size() > 0) {
+                                ContentValues[] contentValuesArray = new ContentValues[contentValuesVector.size()];
+                                contentValuesVector.toArray(contentValuesArray);
+                                inserted = getContext().getContentResolver().bulkInsert(MovieDBContract.VideoEntry.CONTENT_URI, contentValuesArray);
 
-                            getLoaderManager().restartLoader(DETAIL_VIDEO_LOADER, null, detailActivityFragment);
+                                getLoaderManager().restartLoader(DETAIL_VIDEO_LOADER, null, detailActivityFragment);
+                            }
                         }
                     }
 
@@ -465,25 +542,28 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
                 .enqueue(new Callback<MovieDBReviews<MovieReview>>() {
                     @Override
                     public void onResponse(Call<MovieDBReviews<MovieReview>> call, Response<MovieDBReviews<MovieReview>> response) {
-                        List<MovieReview> movieReviewList = response.body().getReviews();
+                        if(null != response) {
+                            List<MovieReview> movieReviewList = response.body().getReviews();
 
-                        // Create ContentValues Vector
-                        Vector<ContentValues> contentValuesVector = new Vector<>(movieReviewList.size());
+                            // Create ContentValues Vector
+                            Vector<ContentValues> contentValuesVector = new Vector<>(movieReviewList.size());
 
-                        for (MovieReview video : movieReviewList) {
-                            ContentValues cv = video.getContentValues();
-                            cv.put(MovieDBContract.ReviewEntry.COLUMN_MOVIE_ID, mMovieId);
-                            contentValuesVector.add(cv);
-                        }
+                            for (MovieReview video : movieReviewList) {
+                                ContentValues cv = video.getContentValues();
+                                cv.put(MovieDBContract.ReviewEntry.COLUMN_MOVIE_ID, mMovieId);
+                                contentValuesVector.add(cv);
+                            }
 
-                        int inserted = 0;
-                        // add to database
-                        if ( contentValuesVector.size() > 0 ) {
-                            ContentValues[] contentValuesArray = new ContentValues[contentValuesVector.size()];
-                            contentValuesVector.toArray(contentValuesArray);
-                            inserted = getContext().getContentResolver().bulkInsert(MovieDBContract.ReviewEntry.CONTENT_URI, contentValuesArray);
+                            int inserted = 0;
+                            // add to database
+                            // Changelog - added NPE check for getContentResolver()
+                            if (null != getContext() && contentValuesVector.size() > 0) {
+                                ContentValues[] contentValuesArray = new ContentValues[contentValuesVector.size()];
+                                contentValuesVector.toArray(contentValuesArray);
+                                inserted = getContext().getContentResolver().bulkInsert(MovieDBContract.ReviewEntry.CONTENT_URI, contentValuesArray);
 
-                            getLoaderManager().restartLoader(DETAIL_REVIEW_LOADER, null, detailActivityFragment);
+                                getLoaderManager().restartLoader(DETAIL_REVIEW_LOADER, null, detailActivityFragment);
+                            }
                         }
                     }
 

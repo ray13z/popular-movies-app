@@ -5,7 +5,6 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
-import android.util.Log;
 
 /**
  * Created by Rayner on 3/8/2016.

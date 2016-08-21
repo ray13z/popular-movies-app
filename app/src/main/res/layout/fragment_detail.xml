@@ -85,6 +85,18 @@
                         android:textSize="@dimen/text_size_small" />
                 </LinearLayout>
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <CheckBox android:id="@+id/detail_favorite"
+                        android:layout_width="wrap_content"
+                        android:layout_height="fill_parent"
+                        android:button="@drawable/star_selector"
+                        android:visibility="gone"/>
+                </LinearLayout>
+
             </LinearLayout>
 
 
