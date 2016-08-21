@@ -16,9 +16,14 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.view.MenuItemCompat;
+import android.support.v7.widget.ShareActionProvider;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -64,7 +69,9 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     private Uri mVideoByIdUri;
     private Uri mReviewByIdUri;
     private String mMovieId;
+    public Uri mShareURI;
     private LayoutInflater mLayoutInflater;
+    private ShareActionProvider mShareActionProvider;
 
     // Setup Butterknife views
     @BindView(R.id.detail_title) TextView detail_title;
@@ -149,6 +156,7 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     static final int FAVORITE_COL_POSTER    = 2;
 
     public DetailActivityFragment() {
+        setHasOptionsMenu(true);
     }
 
     @Override
@@ -185,6 +193,23 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
         });
 
         return view;
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        // Inflate menu resource file.
+        inflater.inflate(R.menu.menu_detail, menu);
+
+        // Locate MenuItem with ShareActionProvider
+        MenuItem item = menu.findItem(R.id.menu_item_share);
+
+        // Fetch and store ShareActionProvider
+        mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(item);
+
+        // If onLoadFinished happens before this, we can go ahead and set the share intent now.
+        if (mShareURI != null) {
+            mShareActionProvider.setShareIntent(createShareVideoIntent());
+        }
     }
 
     private ContentValues getFavoritesContentValues() {
@@ -361,18 +386,20 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
                                 .build();
                         Picasso.with(getContext()).load(path).into(imageView);
 
+                        final Uri videoUri = new Uri.Builder()
+                                .scheme("http")
+                                .authority("www.youtube.com")
+                                .appendPath("watch")
+                                .appendQueryParameter("v", youTubeKey)
+                                .build();
+
                         // Add onClickListener
                         trailerView.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {
                                 startActivity(new Intent(
                                         Intent.ACTION_VIEW,
-                                        new Uri.Builder()
-                                                .scheme("http")
-                                                .authority("www.youtube.com")
-                                                .appendPath("watch")
-                                                .appendQueryParameter("v", youTubeKey)
-                                                .build()
+                                        videoUri
                                 ));
                             }
                         });
@@ -382,6 +409,12 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
 
                         // Refresh
                         trailerContainer.invalidate();
+
+                        // Set share URL
+                        if(data.isFirst()) {
+                            mShareURI = videoUri;
+                            setShareIntent(createShareVideoIntent());
+                        }
                     }
                 } finally {
                     data.close();
@@ -578,5 +611,20 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
+    }
+
+    // Call to update the share intent
+    private void setShareIntent(Intent shareIntent) {
+        if (mShareActionProvider != null) {
+            mShareActionProvider.setShareIntent(shareIntent);
+        }
+    }
+
+    public Intent createShareVideoIntent() {
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, mShareURI.toString());
+        sendIntent.setType("text/plain");
+        return sendIntent;
     }
 }

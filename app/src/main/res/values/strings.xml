@@ -13,4 +13,5 @@
     <string name="detail_trailer_heading">Trailers</string>
     <string name="detail_review_heading">Reviews</string>
     <string name="detail_instructions">Select a movie from the list to view details.</string>
+    <string name="menu_share_title">Share</string>
 </resources>
